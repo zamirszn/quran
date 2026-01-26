@@ -16,19 +16,33 @@ class QuranWebViewApp extends StatelessWidget {
       title: 'Quran Central',
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.teal,
-          brightness: Brightness.light,
+        colorScheme: const ColorScheme.light(
+          primary: Colors.black,
+          surface: Colors.white,
+          onSurface: Colors.black,
         ),
-        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 2),
+        scaffoldBackgroundColor: Colors.white,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.white,
+          foregroundColor: Colors.black,
+          elevation: 0,
+          centerTitle: true,
+        ),
       ),
       darkTheme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: Colors.teal,
-          brightness: Brightness.dark,
+        colorScheme: const ColorScheme.dark(
+          primary: Colors.white,
+          surface: Colors.black,
+          onSurface: Colors.white,
         ),
-        appBarTheme: const AppBarTheme(centerTitle: true, elevation: 2),
+        scaffoldBackgroundColor: Colors.black,
+        appBarTheme: const AppBarTheme(
+          backgroundColor: Colors.black,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+        ),
       ),
       themeMode: ThemeMode.system,
       home: const WebViewScreen(),
@@ -47,8 +61,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
   late final WebViewController _controller;
   bool _isLoading = true;
   bool _hasError = false;
-  String _errorMessage = '';
-  int _currentIndex = 0;
 
   final String _url =
       'https://qurancentral.com/audio/noreen-muhammad-siddique-al-duri-via-abu-amr';
@@ -73,15 +85,15 @@ class _WebViewScreenState extends State<WebViewScreen> {
       params = const PlatformWebViewControllerCreationParams();
     }
 
+    final brightness = MediaQuery.platformBrightnessOf(context);
+    final bgColor = brightness == Brightness.dark ? Colors.black : Colors.white;
+
     _controller = WebViewController.fromPlatformCreationParams(params)
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..setBackgroundColor(Theme.of(context).colorScheme.surface)
+      ..setBackgroundColor(bgColor)
       ..enableZoom(true)
       ..setNavigationDelegate(
         NavigationDelegate(
-          onProgress: (int progress) {
-            // Could add a progress indicator here if needed
-          },
           onPageStarted: (String url) {
             setState(() {
               _isLoading = true;
@@ -97,16 +109,13 @@ class _WebViewScreenState extends State<WebViewScreen> {
             setState(() {
               _isLoading = false;
               _hasError = true;
-              _errorMessage = 'HTTP ${error.response?.statusCode ?? 'Error'}';
             });
           },
           onWebResourceError: (WebResourceError error) {
-            // Only show error for main frame
             if (error.isForMainFrame ?? false) {
               setState(() {
                 _isLoading = false;
                 _hasError = true;
-                _errorMessage = error.description;
               });
             }
           },
@@ -117,7 +126,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
       )
       ..loadRequest(Uri.parse(_url));
 
-    // Platform-specific configurations
     if (_controller.platform is AndroidWebViewController) {
       AndroidWebViewController.enableDebugging(false);
       (_controller.platform as AndroidWebViewController)
@@ -131,73 +139,6 @@ class _WebViewScreenState extends State<WebViewScreen> {
       _isLoading = true;
     });
     await _controller.reload();
-  }
-
-  void _onNavTap(int index) {
-    setState(() {
-      _currentIndex = index;
-    });
-
-    switch (index) {
-      case 0:
-        _controller.loadRequest(Uri.parse(_url));
-        break;
-      case 1:
-        _showBookmarks();
-        break;
-      case 2:
-        _showSettings();
-        break;
-    }
-  }
-
-  void _showBookmarks() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Bookmarks feature coming soon!')),
-    );
-  }
-
-  void _showSettings() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Text('Settings', style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 20),
-            ListTile(
-              leading: const Icon(Icons.brightness_6),
-              title: const Text('Theme'),
-              subtitle: const Text('System default'),
-              onTap: () {
-                Navigator.pop(context);
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Theme follows system settings'),
-                  ),
-                );
-              },
-            ),
-            ListTile(
-              leading: const Icon(Icons.clear_all),
-              title: const Text('Clear Cache'),
-              onTap: () async {
-                await _controller.clearCache();
-                await _controller.clearLocalStorage();
-                if (context.mounted) {
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Cache and storage cleared')),
-                  );
-                }
-              },
-            ),
-          ],
-        ),
-      ),
-    );
   }
 
   @override
@@ -217,81 +158,45 @@ class _WebViewScreenState extends State<WebViewScreen> {
         children: [
           if (_hasError)
             Center(
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.error_outline,
-                      size: 80,
-                      color: Theme.of(context).colorScheme.error,
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 64,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.onSurface.withOpacity(0.5),
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Unable to load page',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 24),
+                  ElevatedButton.icon(
+                    onPressed: _refreshPage,
+                    icon: const Icon(Icons.refresh),
+                    label: const Text('Try Again'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.primary,
+                      foregroundColor: Theme.of(context).colorScheme.surface,
                     ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Failed to Load',
-                      style: Theme.of(context).textTheme.headlineSmall,
-                    ),
-                    const SizedBox(height: 10),
-                    Text(
-                      _errorMessage.isEmpty
-                          ? 'Unable to connect to the server'
-                          : _errorMessage,
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.bodyMedium,
-                    ),
-                    const SizedBox(height: 30),
-                    ElevatedButton.icon(
-                      onPressed: _refreshPage,
-                      icon: const Icon(Icons.refresh),
-                      label: const Text('Try Again'),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             )
           else
             WebViewWidget(controller: _controller),
-          if (_isLoading)
+          if (_isLoading && !_hasError)
             Container(
-              color: Theme.of(context).colorScheme.surface.withOpacity(0.8),
+              color: Theme.of(context).colorScheme.surface,
               child: Center(
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    CircularProgressIndicator(
-                      color: Theme.of(context).colorScheme.primary,
-                    ),
-                    const SizedBox(height: 20),
-                    Text(
-                      'Loading...',
-                      style: Theme.of(context).textTheme.bodyLarge,
-                    ),
-                  ],
+                child: CircularProgressIndicator(
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
             ),
-        ],
-      ),
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: _currentIndex,
-        onDestinationSelected: _onNavTap,
-        destinations: const [
-          NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Home',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.bookmark_outline),
-            selectedIcon: Icon(Icons.bookmark),
-            label: 'Bookmarks',
-          ),
-          NavigationDestination(
-            icon: Icon(Icons.settings_outlined),
-            selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
         ],
       ),
     );
