@@ -11,5 +11,9 @@
       ]
     }
   },
-  "remoteUser": "root"
+  "remoteUser": "root",
+  "runArgs": [
+  "--network=host",
+  "-v", "${env:HOME}/.android:/root/.android"
+]
 }
