@@ -15,5 +15,9 @@
   "runArgs": [
   "--network=host",
   "-v", "${env:HOME}/.android:/root/.android"
+],
+  "mounts": [
+    "source=flutter-cache,target=/opt/flutter,type=volume",
+    "source=android-cache,target=/opt/android-sdk,type=volume"
 ]
 }
