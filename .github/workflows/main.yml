@@ -5,6 +5,13 @@ on:
     branches: [ main, develop ]
   pull_request:
     branches: [ main ]
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: 'Build type'
+        type: choice
+        options: [release, debug]
+        default: release
 
 jobs:
   build:
@@ -29,10 +36,10 @@ jobs:
       run: flutter pub get
 
     - name: Build APK
-      run: flutter build apk --release
+      run: flutter build apk --${{ inputs.build_type || 'release' }}
 
     - name: Upload APK artifact
       uses: actions/upload-artifact@v4
       with:
-        name: release-apk
-        path: build/app/outputs/flutter-apk/app-release.apk
+        name: ${{ inputs.build_type || 'release' }}-apk
+        path: build/app/outputs/flutter-apk/app-${{ inputs.build_type || 'release' }}.apk
